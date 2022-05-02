@@ -70,5 +70,5 @@ contents.each do |row|
   save_thank_you_letter(id, form_letter)
 
   phone_number = clean_phone_number(row[:homephone])
-  puts phone_number
+  puts row[:regdate]
 end
