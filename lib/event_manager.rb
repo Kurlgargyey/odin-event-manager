@@ -8,12 +8,16 @@ require 'google/apis/civicinfo_v2'
 PHONE_NUMBER_PATH = 'output/phone_numbers.html'
 REGTIME_PATH = 'output/regtimes.html'
 
+# This method cleans up zipcodes to be 5 digits
 def clean_zipcode(zipcode)
   zipcode.to_s.rjust(5, '0')[0..4]
 end
 
+# This method cleans up the phone numbers to be 10 digits and evenly formatted
 def clean_phone_number(phone_number)
+  # Extract digits
   number = phone_number.to_s.delete '^0123456789'
+  # Process digits into uniform format
   if number.to_s.count('0123456789') < 10
     '000-000-0000'
   elsif number.to_s.count('0123456789') == 11 && number[0] == '1'
@@ -41,6 +45,7 @@ def save_reghours(hour, tally)
   end
 end
 
+# Tallies up the registration hours and saves the top 2 to a file
 def peak_reghours(times)
   hours = times.map { |datetime| datetime.hour }
   hours.tally.sort_by { |_hour, count| count }.reverse![0..1].each do |hour, tally|
@@ -56,6 +61,7 @@ def save_regdays(day, tally)
   end
 end
 
+# Tallies up the registration days and saves the top 2 to a file
 def peak_regdays(times)
   wdays = times.map { |datetime| Date::DAYNAMES[datetime.wday] }
   wdays.tally.sort_by { |_day, count| count }.reverse![0..1].each do |day, tally|
@@ -63,7 +69,8 @@ def peak_regdays(times)
   end
 end
 
-def regtimes(users)
+# Runs both tallies on a dataset
+def process_regtimes(users)
   arr = []
   users.each do |row|
     arr.push(DateTime.strptime(row[:regdate], '%y/%e/%m %k:%M'))
@@ -72,6 +79,7 @@ def regtimes(users)
   peak_regdays(arr)
 end
 
+# Asks Google Civic for the relevant legislators
 def legislators_by_zipcode(zipcode)
   civic_info = Google::Apis::CivicinfoV2::CivicInfoService.new
   civic_info.key = 'AIzaSyClRzDqDh5MsXwnCWi0kOiiBivP6JsSyBw'
@@ -101,6 +109,7 @@ def process_attendees(attendees)
   template_letter = File.read('form_letter.erb')
   erb_template = ERB.new template_letter
 
+  # Reset phone number data before processing
   File.open(PHONE_NUMBER_PATH, 'w') {}
 
   attendees.each do |row|
@@ -131,6 +140,7 @@ process_attendees(contents)
 
 contents.rewind
 
+# Reset registration data before processing it again
 File.open(REGTIME_PATH, 'w') {}
 
-regtimes(contents)
+process_regtimes(contents)
